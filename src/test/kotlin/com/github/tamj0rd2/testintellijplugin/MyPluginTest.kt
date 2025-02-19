@@ -1,12 +1,13 @@
 package com.github.tamj0rd2.testintellijplugin
 
+import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.github.tamj0rd2.testintellijplugin.services.MyProjectService
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.components.service
 import com.intellij.psi.xml.XmlFile
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.PsiErrorElementUtil
-import com.github.tamj0rd2.testintellijplugin.services.MyProjectService
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
 class MyPluginTest : BasePlatformTestCase() {
@@ -27,6 +28,13 @@ class MyPluginTest : BasePlatformTestCase() {
 
     fun testRename() {
         myFixture.testRename("foo.xml", "foo_after.xml", "a2")
+    }
+
+    fun `test extracting a partial`() {
+        myFixture.configureByFiles("PageView.hbs", "PageViewModel.kt")
+
+        val projectService = project.service<MyProjectService>()
+        projectService.checkOneToOneMappingAgainstModel(assertInstanceOf(myFixture.configureByFile("PageView.hbs"), HbPsiFile::class.java))
     }
 
     fun testProjectService() {
