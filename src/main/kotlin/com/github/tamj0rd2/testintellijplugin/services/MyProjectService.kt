@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 
 interface IMyProjectService {
-    fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<KtDeclaration>
+    fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -38,9 +38,9 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         )
     }
 
-    override fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<KtDeclaration> {
+    override fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
         val model = findCorrespondingKotlinModel(hbsFile.name)
-        return model.allFieldsAndProperties.filter { it.name == hbsVariableName }
+        return model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
     }
 
     data class MappingValidationResult(

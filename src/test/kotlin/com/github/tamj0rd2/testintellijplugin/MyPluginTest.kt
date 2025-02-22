@@ -80,6 +80,25 @@ class MyPluginTest : BasePlatformTestCase() {
         assertSize(1, targetElements)
     }
 
+    fun `test going to declaration of variable that has nesting`() {
+        myFixture.configureByText(
+            "ViewModel.kt",
+            // language=Kt
+            """
+            |data class Person(val name: String)
+            |data class ViewModel(val person: Person)
+            """.trimMargin()
+        )
+
+        myFixture.configureByText(
+            "View.hbs",
+            "<h1>{{<caret>person.name}}, world</h1>"
+        )
+
+        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
+        assertSize(1, targetElements)
+    }
+
     fun `test going to declaration of variable used in if block`() {
         myFixture.configureByText(
             "ViewModel.kt",
