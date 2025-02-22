@@ -6,6 +6,10 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import junit.framework.TestCase
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
 class MyPluginTest : BasePlatformTestCase() {
@@ -49,71 +53,89 @@ class MyPluginTest : BasePlatformTestCase() {
     }
 
     fun `test going to declaration of variable`() {
-        myFixture.configureByText(
-            "ViewModel.kt",
+        runGoToDeclarationTest(
             // language=Kt
-            "data class ViewModel(val greeting: String?)"
+            kotlinFileContent = "data class ViewModel(val greeting: String?)",
+            handlebarsFileContent = "<h1>{{<caret>greeting}}, world</h1>",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "greeting",
+                    definedBy = "ViewModel"
+                )
+            )
         )
-
-        myFixture.configureByText(
-            "View.hbs",
-            "<h1>{{<caret>greeting}}, world</h1>"
-        )
-
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
-        assertSize(1, targetElements)
     }
 
     fun `test going to declaration of property`() {
-        myFixture.configureByText(
-            "ViewModel.kt",
+        runGoToDeclarationTest(
             // language=Kt
-            """class ViewModel { val greeting get() = "Hello" }"""
+            kotlinFileContent = """class ViewModel { val greeting get() = "Hello" }""",
+            handlebarsFileContent = "<h1>{{<caret>greeting}}, world</h1>",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "greeting",
+                    definedBy = "ViewModel"
+                )
+            )
         )
-
-        myFixture.configureByText(
-            "View.hbs",
-            "<h1>{{<caret>greeting}}, world</h1>"
-        )
-
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
-        assertSize(1, targetElements)
     }
 
-    fun `test going to declaration of variable that has nesting`() {
-        myFixture.configureByText(
-            "ViewModel.kt",
+    fun `test going to declaration of variable that includes nesting`() {
+        runGoToDeclarationTest(
             // language=Kt
-            """
-            |data class Person(val name: String)
-            |data class ViewModel(val person: Person)
-            """.trimMargin()
+            kotlinFileContent =
+                """
+                |data class Person(val name: String)
+                |data class ViewModel(val person: Person)
+                """.trimMargin(),
+            handlebarsFileContent = "<h1>{{<caret>person.name}}, world</h1>",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "person",
+                    definedBy = "ViewModel"
+                )
+            )
         )
-
-        myFixture.configureByText(
-            "View.hbs",
-            "<h1>{{<caret>person.name}}, world</h1>"
-        )
-
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
-        assertSize(1, targetElements)
     }
 
     fun `test going to declaration of variable used in if block`() {
-        myFixture.configureByText(
-            "ViewModel.kt",
+        runGoToDeclarationTest(
             // language=Kt
-            "data class ViewModel(val greeting: String?)"
+            kotlinFileContent = "data class ViewModel(val greeting: String?)",
+            handlebarsFileContent = "{{#if <caret>greeting}}<h1>Hello world</h1>{{/if}}",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "greeting",
+                    definedBy = "ViewModel"
+                )
+            )
         )
-
-        myFixture.configureByText(
-            "View.hbs",
-            "{{#if <caret>greeting}}<h1>Hello world</h1>{{/if}}"
-        )
-
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
-        assertSize(1, targetElements)
     }
 
     override fun getTestDataPath() = "src/test/testData/rename"
+
+    data class ExpectedReference(
+        val name: String,
+        val definedBy: String,
+    )
+
+    private fun runGoToDeclarationTest(
+        kotlinFileContent: String,
+        handlebarsFileContent: String,
+        expectedReferences: List<ExpectedReference>,
+    ) {
+        myFixture.configureByText("ViewModel.kt", kotlinFileContent)
+        myFixture.configureByText("View.hbs", handlebarsFileContent)
+
+        val targetElements =
+            GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
+                .map {
+                    ExpectedReference(
+                        name = (it as KtNamedDeclaration).name ?: "undetermined",
+                        definedBy = it.getParentOfType<KtClassOrObject>(true)?.name ?: "undetermined"
+                    )
+                }
+
+        TestCase.assertEquals(expectedReferences, targetElements)
+    }
 }
