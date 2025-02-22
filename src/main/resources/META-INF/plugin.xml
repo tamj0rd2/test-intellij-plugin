@@ -11,15 +11,14 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.tamj0rd2.testintellijplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <gotoDeclarationHandler implementation="com.github.tamj0rd2.testintellijplugin.handlers.HandlebarsGoToDeclarationHandler" />
-        <!-- Declare the project-level service -->
+        <gotoDeclarationHandler
+                implementation="com.github.tamj0rd2.testintellijplugin.handlers.HandlebarsGoToDeclarationHandler"/>
+
         <projectService
                 serviceInterface="com.github.tamj0rd2.testintellijplugin.services.IMyProjectService"
                 serviceImplementation="com.github.tamj0rd2.testintellijplugin.services.MyProjectService"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="com.github.tamj0rd2.testintellijplugin.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
 </idea-plugin>

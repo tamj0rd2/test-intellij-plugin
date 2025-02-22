@@ -14,7 +14,6 @@ import com.intellij.psi.util.parentOfType
 import org.jetbrains.kotlin.asJava.classes.KtUltraLightClass
 import org.jetbrains.kotlin.asJava.elements.KtLightField
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
-import java.lang.IllegalStateException
 
 interface IMyProjectService {
     fun findReferenceInKotlin(hbsVariable: HbSimpleMustache): Collection<PsiElement>
@@ -27,10 +26,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
     init {
         thisLogger().info(MyBundle.message("projectService", project.name))
-        thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
     }
-
-    fun getRandomNumber() = (1..100).random()
 
     fun checkOneToOneMappingAgainstModel(hbsFile: HbPsiFile) {
         val fieldsRequiredByTemplate = hbsFile.findAllReferencedModelVariables()
