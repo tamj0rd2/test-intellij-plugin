@@ -6,29 +6,77 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.jetbrains.kotlin.psi.KtFile
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
 class MyPluginTest : BasePlatformTestCase() {
 
     fun `test validating one to one mapping`() {
-        myFixture.configureByFiles("PageView.hbs", "PageViewModel.kt")
-
-        val projectService = project.service<MyProjectService>()
-        val result = projectService.validateOneToOneMappingAgainstViewModel(
-            assertInstanceOf(
-                myFixture.configureByFile("PageView.hbs"),
-                HbPsiFile::class.java
-            )
+        myFixture.configureByText(
+            "ViewModel.kt",
+            // language=Kt
+            """
+            |interface InheritedFields {
+            |    val inheritedComputedProperty get() = "some inherited computed property"
+            |    val inheritedField: Boolean
+            |    val anotherInheritedField: Int
+            |}
+            |
+            |data class ViewModel(
+            |    val aField: String,
+            |    override val inheritedField: Boolean,
+            |) : InheritedFields {
+            |    val aComputedProperty get() = "some computed property"
+            |    val aHardCodedProperty = 123
+            |    val anotherInheritedField = 456
+            |}
+            """.trimMargin()
         )
 
+        val hbsFile = myFixture.configureByText(
+            "View.hbs",
+            // language=Handlebars
+            """
+            |<p><{{aField}}/p>
+            |<p><{{aComputedProperty}}/p>
+            |<p>{{inheritedComputedProperty}}</p>
+            |<p>This one doesn't exist in the view model: {{nonExistentField}}</p>
+            """.trimMargin()
+        ) as HbPsiFile
+
+        val projectService = project.service<MyProjectService>()
+        val result = projectService.validateOneToOneMappingAgainstViewModel(hbsFile)
         assertEquals(setOf("nonExistentField"), result.fieldsMissingFromViewModel)
     }
 
     fun `test going to declaration of variable`() {
-        myFixture.configureByFiles("PageView.hbs", "PageViewModel.kt")
+        myFixture.configureByText(
+            "ViewModel.kt",
+            // language=Kt
+            "data class ViewModel(val greeting: String?)"
+        )
 
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, 37)
+        myFixture.configureByText(
+            "View.hbs",
+            "<h1>{{<caret>greeting}}, world</h1>"
+        )
+
+        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
+        assertSize(1, targetElements)
+    }
+
+    fun `test going to declaration of property`() {
+        myFixture.configureByText(
+            "ViewModel.kt",
+            // language=Kt
+            """class ViewModel { val greeting get() = "Hello" }"""
+        )
+
+        myFixture.configureByText(
+            "View.hbs",
+            "<h1>{{<caret>greeting}}, world</h1>"
+        )
+
+        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
         assertSize(1, targetElements)
     }
 
@@ -37,13 +85,12 @@ class MyPluginTest : BasePlatformTestCase() {
             "ViewModel.kt",
             // language=Kt
             "data class ViewModel(val greeting: String?)"
-        ) as KtFile
+        )
 
         myFixture.configureByText(
             "View.hbs",
-            // language=Handlebars
             "{{#if <caret>greeting}}<h1>Hello world</h1>{{/if}}"
-        ) as HbPsiFile
+        )
 
         val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
         assertSize(1, targetElements)

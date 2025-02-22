@@ -6,16 +6,18 @@ import com.github.tamj0rd2.testintellijplugin.MyBundle
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiField
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.kotlin.asJava.classes.KtUltraLightClass
+import org.jetbrains.kotlin.asJava.classes.KtLightClassBase
 import org.jetbrains.kotlin.asJava.elements.KtLightField
+import org.jetbrains.kotlin.asJava.elements.KtLightMethod
+import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 
 interface IMyProjectService {
-    fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<PsiField>
+    fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -31,14 +33,14 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         val viewModel = findCorrespondingKotlinModel(hbsFile.name)
 
         return MappingValidationResult(
-            fieldsInModel = viewModel.allFieldNames,
+            fieldsInModel = viewModel.allFieldsAndProperties.mapNotNull { it.name }.toSet(),
             fieldsRequiredByTemplate = fieldsRequiredByTemplate
         )
     }
 
-    override fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<PsiField> {
+    override fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsVariableName: String): Collection<KtDeclaration> {
         val model = findCorrespondingKotlinModel(hbsFile.name)
-        return model.fields.filter { it.name == hbsVariableName }
+        return model.allFieldsAndProperties.filter { it.name == hbsVariableName }
     }
 
     data class MappingValidationResult(
@@ -51,17 +53,22 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     private fun HbPsiFile.findAllReferencedModelVariables(): Set<String> =
         PsiTreeUtil.collectElementsOfType(this, HbSimpleMustache::class.java).map { it.name }.toSet()
 
-    private fun findCorrespondingKotlinModel(hbsFileName: String): KtUltraLightClass {
+    private fun findCorrespondingKotlinModel(hbsFileName: String): KtLightClassBase {
         val fileNameWithoutExtension = hbsFileName.substringBefore(".hbs")
         val expectedModelName = "${fileNameWithoutExtension}Model"
         return psiShortNamesCache.getClassesByName(
             expectedModelName,
             // NOTE: performance could be improved here by not using the scope of the entire project.
             GlobalSearchScope.projectScope(project)
-        ).firstIsInstance<KtUltraLightClass>()
+        ).firstIsInstance<KtLightClassBase>()
     }
 
-    private val KtUltraLightClass.allFieldNames: Set<String>
-        get() = allFields.filterIsInstance<KtLightField>().map { it.name }.toSet()
-}
+    private val KtLightClassBase.allFieldsAndProperties: List<KtDeclaration>
+        get() = allProperties + allFields.filterIsInstance<KtLightField>().mapNotNull { it.kotlinOrigin }
 
+    private val KtLightClassBase.allProperties: List<KtProperty>
+        get() = allMethods
+            .filterIsInstance<KtLightMethod>()
+            .map { it.kotlinOrigin }
+            .filterIsInstance<KtProperty>()
+}
