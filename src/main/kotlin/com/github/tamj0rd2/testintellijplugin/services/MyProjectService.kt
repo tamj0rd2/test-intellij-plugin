@@ -50,12 +50,8 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         }
 
         val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
-        // TODO: this is possible to be a list.
         val fieldInModel = model.allFieldsAndProperties.single { it.name == hbsIdentifierParts.first() }
-        val typeReference = fieldInModel.typeReference!!
-        val referencedName = typeReference.descendantsOfType<KtNameReferenceExpression>().first().getReferencedName()
-
-        return findReferenceInKotlin(referencedName, hbsIdentifierParts.drop(1))
+        return findReferenceInKotlin(fieldInModel.nameOfReferencedType, hbsIdentifierParts.drop(1))
     }
 
     data class MappingValidationResult(
@@ -65,9 +61,6 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         val fieldsMissingFromViewModel = fieldsRequiredByTemplate - fieldsInModel
     }
 
-    private fun HbPsiFile.findAllReferencedModelVariables(): Set<String> =
-        PsiTreeUtil.collectElementsOfType(this, HbSimpleMustache::class.java).map { it.name }.toSet()
-
     private fun findCorrespondingKotlinModel(modelName: String): KtLightClassBase? {
         return psiShortNamesCache.getClassesByName(
             modelName,
@@ -76,17 +69,25 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         ).firstIsInstanceOrNull<KtLightClassBase>()
     }
 
-    private val KtLightClassBase.allFieldsAndProperties: List<KtDeclaration>
-        get() = allProperties + allFields.filterIsInstance<KtLightField>().mapNotNull { it.kotlinOrigin }
+    private companion object {
+        fun HbPsiFile.findAllReferencedModelVariables(): Set<String> =
+            PsiTreeUtil.collectElementsOfType(this, HbSimpleMustache::class.java).map { it.name }.toSet()
 
-    private val KtLightClassBase.allProperties: List<KtProperty>
-        get() = allMethods
-            .filterIsInstance<KtLightMethod>()
-            .map { it.kotlinOrigin }
-            .filterIsInstance<KtProperty>()
+        val KtDeclaration.nameOfReferencedType: String
+            get() = typeReference!!.descendantsOfType<KtNameReferenceExpression>().first().getReferencedName()
 
-    private val KtDeclaration.typeReference get() = when(this) {
-        is KtParameter -> this.typeReference
-        else -> TODO("unsupported type ${this::class.java}")
+        val KtLightClassBase.allFieldsAndProperties: List<KtDeclaration>
+            get() = allProperties + allFields.filterIsInstance<KtLightField>().mapNotNull { it.kotlinOrigin }
+
+        val KtLightClassBase.allProperties: List<KtProperty>
+            get() = allMethods
+                .filterIsInstance<KtLightMethod>()
+                .map { it.kotlinOrigin }
+                .filterIsInstance<KtProperty>()
+
+        val KtDeclaration.typeReference get() = when(this) {
+            is KtParameter -> this.typeReference
+            else -> error("unsupported type ${this::class.java}")
+        }
     }
 }
