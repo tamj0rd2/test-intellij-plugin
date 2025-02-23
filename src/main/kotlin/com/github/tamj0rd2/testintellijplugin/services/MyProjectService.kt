@@ -41,13 +41,15 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         )
     }
 
-    override fun findKotlinReferences(hbsFileName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
+    override fun findKotlinReferences(
+        hbsFileName: String,
+        hbsIdentifierParts: List<String>,
+    ): Collection<KtDeclaration> {
         return recursivelyFindMatchingKotlinReferences(
             typesToSearchIn = setOf(hbsFileNameToKotlinModelName(hbsFileName)),
             hbsIdentifierParts = hbsIdentifierParts
         )
     }
-
 
     private tailrec fun recursivelyFindMatchingKotlinReferences(
         typesToSearchIn: Set<String>,
@@ -100,11 +102,12 @@ class MyProjectService(private val project: Project) : IMyProjectService {
                 .map { it.kotlinOrigin }
                 .filterIsInstance<KtProperty>()
 
-        val KtDeclaration.typeReference get() = when(this) {
-            is KtParameter -> this.typeReference
-            is KtProperty -> this.typeReference
-            else -> error("unsupported type ${this::class.java}")
-        }
+        val KtDeclaration.typeReference
+            get() = when (this) {
+                is KtParameter -> this.typeReference
+                is KtProperty -> this.typeReference
+                else -> error("unsupported type ${this::class.java}")
+            }
 
         private fun hbsFileNameToKotlinModelName(hbsFileName: String) = hbsFileName.substringBefore(".hbs") + "Model"
     }
