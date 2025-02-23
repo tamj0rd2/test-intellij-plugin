@@ -46,12 +46,12 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     }
 
     private tailrec fun recursivelyFindMatchingKotlinReferences(
-        matchingTypeReferences: Set<String>,
+        typesToSearchIn: Set<String>,
         hbsIdentifierParts: List<String>,
     ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val models = matchingTypeReferences.mapNotNull(::findKotlinClass)
+        val models = typesToSearchIn.mapNotNull(::findKotlinClass)
 
         val matchingFields = models
             .flatMap { it.allFieldsAndProperties }
@@ -60,7 +60,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         if (hbsIdentifierParts.size == 1) return matchingFields
 
         return recursivelyFindMatchingKotlinReferences(
-            matchingTypeReferences = matchingFields.map { it.nameOfReferencedType }.toSet(),
+            typesToSearchIn = matchingFields.map { it.nameOfReferencedType }.toSet(),
             hbsIdentifierParts = hbsIdentifierParts.drop(1)
         )
     }
