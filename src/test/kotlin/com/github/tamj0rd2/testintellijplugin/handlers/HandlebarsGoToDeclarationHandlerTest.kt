@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
-    fun `test going to declaration of variable`() {
+    fun `test going to declaration of variable that is a kotlin field`() {
         runGoToDeclarationTest(
             // language=Kt
             kotlinFileContent = "data class ViewModel(val greeting: String?)",
@@ -22,7 +22,7 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test going to declaration of property`() {
+    fun `test going to declaration of variable that is a kotlin property`() {
         runGoToDeclarationTest(
             // language=Kt
             kotlinFileContent = """class ViewModel { val greeting get() = "Hello" }""",
@@ -30,24 +30,6 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
             expectedReferences = listOf(
                 ExpectedReference(
                     name = "greeting",
-                    definedBy = "ViewModel"
-                )
-            )
-        )
-    }
-
-    fun `test going to declaration of variable that includes nesting`() {
-        runGoToDeclarationTest(
-            // language=Kt
-            kotlinFileContent =
-                """
-                |data class Person(val name: String)
-                |data class ViewModel(val person: Person)
-                """.trimMargin(),
-            handlebarsFileContent = "<h1>{{<caret>person.name}}, world</h1>",
-            expectedReferences = listOf(
-                ExpectedReference(
-                    name = "person",
                     definedBy = "ViewModel"
                 )
             )
@@ -68,6 +50,59 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test going to declaration of variable that includes nesting`() {
+        runGoToDeclarationTest(
+            kotlinFilesContent = mapOf(
+                "ViewModel.kt" to
+                        // language=Kt
+                        """
+                        |package models
+                        |data class ViewModel(val person: Person)
+                        """.trimMargin(),
+                "Person.kt" to
+                        // language=Kt
+                        """
+                        |package models
+                        |data class Person(val name: String)
+                        """.trimMargin(),
+            ),
+            handlebarsFileContent = "<h1>{{<caret>person.name}}, world</h1>",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "person",
+                    definedBy = "ViewModel"
+                )
+            )
+        )
+    }
+
+    fun `test going to declaration of variable that includes nesting - nested`() {
+        runGoToDeclarationTest(
+            kotlinFilesContent = mapOf(
+                "ViewModel.kt" to
+                        // language=Kt
+                        """
+                        |package models
+                        |data class ViewModel(val person: Person)
+                        """.trimMargin(),
+                "Person.kt" to
+                        // language=Kt
+                        """
+                        |package models
+                        |data class Person(val name: String)
+                        """.trimMargin(),
+            ),
+            handlebarsFileContent = "<h1>{{person.<caret>name}}, world</h1>",
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "name",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
+
     private data class ExpectedReference(
         val name: String,
         val definedBy: String,
@@ -77,8 +112,18 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
         kotlinFileContent: String,
         handlebarsFileContent: String,
         expectedReferences: List<ExpectedReference>,
+    ) = runGoToDeclarationTest(
+        kotlinFilesContent = mapOf("ViewModel.kt" to kotlinFileContent),
+        handlebarsFileContent = handlebarsFileContent,
+        expectedReferences = expectedReferences,
+    )
+
+    private fun runGoToDeclarationTest(
+        kotlinFilesContent: Map<String, String>,
+        handlebarsFileContent: String,
+        expectedReferences: List<ExpectedReference>,
     ) {
-        myFixture.configureByText("ViewModel.kt", kotlinFileContent)
+        kotlinFilesContent.forEach { (fileName, content) -> myFixture.configureByText(fileName, content) }
         myFixture.configureByText("View.hbs", handlebarsFileContent)
 
         val targetElements =

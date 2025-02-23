@@ -11,3 +11,7 @@ data class PageViewModel(
 ): SomeParentInterface {
     val someProperty: Boolean = true
 }
+
+data class Person(val name: String)
+
+data class SecondViewModel(val person: Person)

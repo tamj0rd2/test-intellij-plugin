@@ -9,15 +9,18 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.descendantsOfType
 import org.jetbrains.kotlin.asJava.classes.KtLightClassBase
 import org.jetbrains.kotlin.asJava.elements.KtLightField
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 interface IMyProjectService {
-    fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
+    fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -30,7 +33,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
     fun validateOneToOneMappingAgainstViewModel(hbsFile: HbPsiFile): MappingValidationResult {
         val fieldsRequiredByTemplate = hbsFile.findAllReferencedModelVariables()
-        val viewModel = findCorrespondingKotlinModel(hbsFile.name)
+        val viewModel = findCorrespondingKotlinModel(hbsFile.name) ?: error("model not found")
 
         return MappingValidationResult(
             fieldsInModel = viewModel.allFieldsAndProperties.mapNotNull { it.name }.toSet(),
@@ -38,9 +41,21 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         )
     }
 
-    override fun findReferenceInKotlin(hbsFile: HbPsiFile, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
-        val model = findCorrespondingKotlinModel(hbsFile.name)
-        return model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
+    override fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
+        if (hbsIdentifierParts.isEmpty()) return emptyList()
+
+        if (hbsIdentifierParts.size == 1) {
+            val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
+            return model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
+        }
+
+        val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
+        // TODO: this is possible to be a list.
+        val fieldInModel = model.allFieldsAndProperties.single { it.name == hbsIdentifierParts.first() }
+        val typeReference = fieldInModel.typeReference!!
+        val referencedName = typeReference.descendantsOfType<KtNameReferenceExpression>().first().getReferencedName()
+
+        return findReferenceInKotlin(referencedName, hbsIdentifierParts.drop(1))
     }
 
     data class MappingValidationResult(
@@ -53,14 +68,12 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     private fun HbPsiFile.findAllReferencedModelVariables(): Set<String> =
         PsiTreeUtil.collectElementsOfType(this, HbSimpleMustache::class.java).map { it.name }.toSet()
 
-    private fun findCorrespondingKotlinModel(hbsFileName: String): KtLightClassBase {
-        val fileNameWithoutExtension = hbsFileName.substringBefore(".hbs")
-        val expectedModelName = "${fileNameWithoutExtension}Model"
+    private fun findCorrespondingKotlinModel(modelName: String): KtLightClassBase? {
         return psiShortNamesCache.getClassesByName(
-            expectedModelName,
+            modelName,
             // NOTE: performance could be improved here by not using the scope of the entire project.
             GlobalSearchScope.projectScope(project)
-        ).firstIsInstance<KtLightClassBase>()
+        ).firstIsInstanceOrNull<KtLightClassBase>()
     }
 
     private val KtLightClassBase.allFieldsAndProperties: List<KtDeclaration>
@@ -71,4 +84,9 @@ class MyProjectService(private val project: Project) : IMyProjectService {
             .filterIsInstance<KtLightMethod>()
             .map { it.kotlinOrigin }
             .filterIsInstance<KtProperty>()
+
+    private val KtDeclaration.typeReference get() = when(this) {
+        is KtParameter -> this.typeReference
+        else -> TODO("unsupported type ${this::class.java}")
+    }
 }
