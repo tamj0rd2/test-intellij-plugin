@@ -67,7 +67,9 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val models = typesToSearchIn.flatMap { findKotlinClassesByName(it, scope) }.distinctBy { it.node }
+        val models = typesToSearchIn
+            .flatMap { findKotlinClassesByName(it, scope) }
+            .distinctBy { it.node }
 
         val matchingFields = models
             .flatMap { it.allFieldsAndProperties }
