@@ -17,10 +17,9 @@ import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 interface IMyProjectService {
-    fun findKotlinReferences(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
+    fun findKotlinReferences(hbsFileName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -33,7 +32,8 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
     fun validateOneToOneMappingAgainstViewModel(hbsFile: HbPsiFile): MappingValidationResult {
         val fieldsRequiredByTemplate = hbsFile.findAllReferencedModelVariables()
-        val viewModel = findKotlinClass(hbsFile.name) ?: error("model not found")
+        val viewModelName = hbsFileNameToKotlinModelName(hbsFile.name)
+        val viewModel = findKotlinClassesByName(viewModelName).single()
 
         return MappingValidationResult(
             fieldsInModel = viewModel.allFieldsAndProperties.mapNotNull { it.name }.toSet(),
@@ -41,9 +41,13 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         )
     }
 
-    override fun findKotlinReferences(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
-        return recursivelyFindMatchingKotlinReferences(setOf(ktModelName), hbsIdentifierParts)
+    override fun findKotlinReferences(hbsFileName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
+        return recursivelyFindMatchingKotlinReferences(
+            typesToSearchIn = setOf(hbsFileNameToKotlinModelName(hbsFileName)),
+            hbsIdentifierParts = hbsIdentifierParts
+        )
     }
+
 
     private tailrec fun recursivelyFindMatchingKotlinReferences(
         typesToSearchIn: Set<String>,
@@ -51,7 +55,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val models = typesToSearchIn.mapNotNull(::findKotlinClass)
+        val models = typesToSearchIn.flatMap(::findKotlinClassesByName).distinctBy { it.node }
 
         val matchingFields = models
             .flatMap { it.allFieldsAndProperties }
@@ -72,12 +76,12 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         val fieldsMissingFromViewModel = fieldsRequiredByTemplate - fieldsInModel
     }
 
-    private fun findKotlinClass(modelName: String): KtLightClassBase? {
+    private fun findKotlinClassesByName(modelName: String): List<KtLightClassBase> {
         return psiShortNamesCache.getClassesByName(
             modelName,
             // NOTE: performance could be improved here by not using the scope of the entire project.
             GlobalSearchScope.projectScope(project)
-        ).firstIsInstanceOrNull<KtLightClassBase>()
+        ).filterIsInstance<KtLightClassBase>().distinctBy { it.node }
     }
 
     private companion object {
@@ -101,5 +105,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
             is KtProperty -> this.typeReference
             else -> error("unsupported type ${this::class.java}")
         }
+
+        private fun hbsFileNameToKotlinModelName(hbsFileName: String) = hbsFileName.substringBefore(".hbs") + "Model"
     }
 }
