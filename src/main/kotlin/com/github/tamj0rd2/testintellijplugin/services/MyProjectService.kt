@@ -42,15 +42,27 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     }
 
     override fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
+        return recursivelyFindMatchingKotlinReferences(setOf(ktModelName), hbsIdentifierParts)
+    }
+
+    private tailrec fun recursivelyFindMatchingKotlinReferences(
+        matchingTypeReferences: Set<String>,
+        hbsIdentifierParts: List<String>,
+    ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
-        val matchingFields = model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
+        val models = matchingTypeReferences.mapNotNull(::findCorrespondingKotlinModel)
+
+        val matchingFields = models
+            .flatMap { it.allFieldsAndProperties }
+            .filter { it.name == hbsIdentifierParts.first() }
 
         if (hbsIdentifierParts.size == 1) return matchingFields
 
-        val matchingTypeReferences = matchingFields.map { it.nameOfReferencedType }.toSet()
-        return matchingTypeReferences.flatMap { findReferenceInKotlin(it, hbsIdentifierParts.drop(1)) }
+        return recursivelyFindMatchingKotlinReferences(
+            matchingTypeReferences = matchingFields.map { it.nameOfReferencedType }.toSet(),
+            hbsIdentifierParts = hbsIdentifierParts.drop(1)
+        )
     }
 
     data class MappingValidationResult(
