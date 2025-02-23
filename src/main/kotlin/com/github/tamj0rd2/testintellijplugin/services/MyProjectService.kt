@@ -98,6 +98,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
         val KtDeclaration.typeReference get() = when(this) {
             is KtParameter -> this.typeReference
+            is KtProperty -> this.typeReference
             else -> error("unsupported type ${this::class.java}")
         }
     }
