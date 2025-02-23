@@ -29,7 +29,7 @@ internal class HandlebarsGoToDeclarationHandler : GotoDeclarationHandler {
         }.map { it.text }
 
         val expectedModelName = hbsFile.name.substringBefore(".hbs") + "Model"
-        return service.findReferenceInKotlin(expectedModelName, identifierParts).toTypedArray()
+        return service.findKotlinReferences(expectedModelName, identifierParts).toTypedArray()
     }
 
     private fun PsiElement?.isHbsIdElement(): Boolean {

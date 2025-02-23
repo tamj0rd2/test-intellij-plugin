@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 interface IMyProjectService {
-    fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
+    fun findKotlinReferences(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -33,7 +33,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
     fun validateOneToOneMappingAgainstViewModel(hbsFile: HbPsiFile): MappingValidationResult {
         val fieldsRequiredByTemplate = hbsFile.findAllReferencedModelVariables()
-        val viewModel = findCorrespondingKotlinModel(hbsFile.name) ?: error("model not found")
+        val viewModel = findKotlinClass(hbsFile.name) ?: error("model not found")
 
         return MappingValidationResult(
             fieldsInModel = viewModel.allFieldsAndProperties.mapNotNull { it.name }.toSet(),
@@ -41,7 +41,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         )
     }
 
-    override fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
+    override fun findKotlinReferences(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
         return recursivelyFindMatchingKotlinReferences(setOf(ktModelName), hbsIdentifierParts)
     }
 
@@ -51,7 +51,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val models = matchingTypeReferences.mapNotNull(::findCorrespondingKotlinModel)
+        val models = matchingTypeReferences.mapNotNull(::findKotlinClass)
 
         val matchingFields = models
             .flatMap { it.allFieldsAndProperties }
@@ -72,7 +72,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         val fieldsMissingFromViewModel = fieldsRequiredByTemplate - fieldsInModel
     }
 
-    private fun findCorrespondingKotlinModel(modelName: String): KtLightClassBase? {
+    private fun findKotlinClass(modelName: String): KtLightClassBase? {
         return psiShortNamesCache.getClassesByName(
             modelName,
             // NOTE: performance could be improved here by not using the scope of the entire project.
