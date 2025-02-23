@@ -42,16 +42,15 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     }
 
     override fun findReferenceInKotlin(ktModelName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration> {
-        if (hbsIdentifierParts.isEmpty()) return emptyList()
-
-        if (hbsIdentifierParts.size == 1) {
-            val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
-            return model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
-        }
+        require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
         val model = findCorrespondingKotlinModel(ktModelName) ?: return emptyList()
-        val fieldInModel = model.allFieldsAndProperties.single { it.name == hbsIdentifierParts.first() }
-        return findReferenceInKotlin(fieldInModel.nameOfReferencedType, hbsIdentifierParts.drop(1))
+        val matchingFields = model.allFieldsAndProperties.filter { it.name == hbsIdentifierParts.first() }
+
+        if (hbsIdentifierParts.size == 1) return matchingFields
+
+        val matchingTypeReferences = matchingFields.map { it.nameOfReferencedType }.toSet()
+        return matchingTypeReferences.flatMap { findReferenceInKotlin(it, hbsIdentifierParts.drop(1)) }
     }
 
     data class MappingValidationResult(
