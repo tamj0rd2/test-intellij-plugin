@@ -28,7 +28,10 @@ internal class HandlebarsGoToDeclarationHandler : GotoDeclarationHandler {
             true
         }.map { it.text }
 
-        return service.findKotlinReferences(hbsFile.name, identifierParts).toTypedArray()
+        return service.findKotlinReferences(
+            hbsFile = hbsFile.virtualFile,
+            hbsIdentifierParts = identifierParts,
+        ).toTypedArray()
     }
 
     private fun PsiElement?.isHbsIdElement(): Boolean {

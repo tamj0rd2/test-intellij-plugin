@@ -6,7 +6,10 @@ import com.github.tamj0rd2.testintellijplugin.MyBundle
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.resolveFromRootOrRelative
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.GlobalSearchScopesCore
 import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.descendantsOfType
@@ -19,7 +22,7 @@ import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 
 interface IMyProjectService {
-    fun findKotlinReferences(hbsFileName: String, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
+    fun findKotlinReferences(hbsFile: VirtualFile, hbsIdentifierParts: List<String>): Collection<KtDeclaration>
 }
 
 @Service(Service.Level.PROJECT)
@@ -32,8 +35,11 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
     fun validateOneToOneMappingAgainstViewModel(hbsFile: HbPsiFile): MappingValidationResult {
         val fieldsRequiredByTemplate = hbsFile.findAllReferencedModelVariables()
-        val viewModelName = hbsFileNameToKotlinModelName(hbsFile.name)
-        val viewModel = findKotlinClassesByName(viewModelName).single()
+        val viewModelName = hbsFileToKotlinModelName(hbsFile.virtualFile)
+        val viewModel = findKotlinClassesByName(
+            modelName = viewModelName,
+            scope = GlobalSearchScope.projectScope(project)
+        ).single()
 
         return MappingValidationResult(
             fieldsInModel = viewModel.allFieldsAndProperties.mapNotNull { it.name }.toSet(),
@@ -42,22 +48,26 @@ class MyProjectService(private val project: Project) : IMyProjectService {
     }
 
     override fun findKotlinReferences(
-        hbsFileName: String,
+        hbsFile: VirtualFile,
         hbsIdentifierParts: List<String>,
     ): Collection<KtDeclaration> {
+        val scope = hbsFile.toKotlinProductionScopeOrDefault()
+
         return recursivelyFindMatchingKotlinReferences(
-            typesToSearchIn = setOf(hbsFileNameToKotlinModelName(hbsFileName)),
-            hbsIdentifierParts = hbsIdentifierParts
+            typesToSearchIn = setOf(hbsFileToKotlinModelName(hbsFile)),
+            hbsIdentifierParts = hbsIdentifierParts,
+            scope = scope
         )
     }
 
     private tailrec fun recursivelyFindMatchingKotlinReferences(
         typesToSearchIn: Set<String>,
         hbsIdentifierParts: List<String>,
+        scope: GlobalSearchScope,
     ): Collection<KtDeclaration> {
         require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
 
-        val models = typesToSearchIn.flatMap(::findKotlinClassesByName).distinctBy { it.node }
+        val models = typesToSearchIn.flatMap { findKotlinClassesByName(it, scope) }.distinctBy { it.node }
 
         val matchingFields = models
             .flatMap { it.allFieldsAndProperties }
@@ -67,7 +77,8 @@ class MyProjectService(private val project: Project) : IMyProjectService {
 
         return recursivelyFindMatchingKotlinReferences(
             typesToSearchIn = matchingFields.map { it.nameOfReferencedType }.toSet(),
-            hbsIdentifierParts = hbsIdentifierParts.drop(1)
+            hbsIdentifierParts = hbsIdentifierParts.drop(1),
+            scope = scope,
         )
     }
 
@@ -78,12 +89,22 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         val fieldsMissingFromViewModel = fieldsRequiredByTemplate - fieldsInModel
     }
 
-    private fun findKotlinClassesByName(modelName: String): List<KtLightClassBase> {
-        return psiShortNamesCache.getClassesByName(
-            modelName,
-            // NOTE: performance could be improved here by not using the scope of the entire project.
-            GlobalSearchScope.projectScope(project)
-        ).filterIsInstance<KtLightClassBase>().distinctBy { it.node }
+    private fun findKotlinClassesByName(modelName: String, scope: GlobalSearchScope): List<KtLightClassBase> {
+        return psiShortNamesCache.getClassesByName(modelName, scope)
+            .filterIsInstance<KtLightClassBase>()
+            .distinctBy { it.node }
+    }
+
+    private fun VirtualFile.toKotlinProductionScopeOrDefault(): GlobalSearchScope {
+        if (!path.contains("src/main/resources")) return GlobalSearchScope.projectScope(project)
+
+        var folderToSearch = this
+        while(!folderToSearch.path.endsWith("src/main")) {
+            folderToSearch = folderToSearch.parent
+        }
+        folderToSearch = folderToSearch.resolveFromRootOrRelative("kotlin")!!
+
+        return GlobalSearchScopesCore.directoryScope(project, folderToSearch, true)
     }
 
     private companion object {
@@ -109,6 +130,6 @@ class MyProjectService(private val project: Project) : IMyProjectService {
                 else -> error("unsupported type ${this::class.java}")
             }
 
-        private fun hbsFileNameToKotlinModelName(hbsFileName: String) = hbsFileName.substringBefore(".hbs") + "Model"
+        private fun hbsFileToKotlinModelName(hbsFile: VirtualFile) = hbsFile.nameWithoutExtension + "Model"
     }
 }
