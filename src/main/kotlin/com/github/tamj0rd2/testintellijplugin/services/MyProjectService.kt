@@ -132,6 +132,12 @@ class MyProjectService(private val project: Project) : IMyProjectService {
                 else -> error("unsupported type ${this::class.java}")
             }
 
-        private fun hbsFileToKotlinModelName(hbsFile: VirtualFile) = hbsFile.nameWithoutExtension + "Model"
+        private fun hbsFileToKotlinModelName(hbsFile: VirtualFile): String {
+            if (hbsFile.nameWithoutExtension.endsWith("View")) {
+                return hbsFile.nameWithoutExtension + "Model"
+            }
+
+            return hbsFile.nameWithoutExtension
+        }
     }
 }

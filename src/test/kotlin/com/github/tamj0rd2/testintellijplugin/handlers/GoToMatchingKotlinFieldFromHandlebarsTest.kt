@@ -104,6 +104,26 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test going to declaration of variable that is a kotlin field, from within a partial`() {
+        runGoToKotlinDeclarationTest(
+            files = mapOf(
+                "Person.kt" to
+                        // language=Kt
+                        """
+                        |data class Person(val name: String)
+                        """.trimMargin(),
+                "Person.hbs" to
+                        "<h1>{{<caret>name}}, world</h1>",
+            ),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "name",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
     private data class ExpectedReference(
         val name: String,
         val definedBy: String,
