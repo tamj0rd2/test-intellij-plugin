@@ -2,7 +2,6 @@ package com.github.tamj0rd2.testintellijplugin.handlers
 
 import com.dmarcotte.handlebars.psi.HbMustacheName
 import com.dmarcotte.handlebars.psi.HbPsiElement
-import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.github.tamj0rd2.testintellijplugin.services.MyProjectService
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.components.service
@@ -14,11 +13,17 @@ import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 
 internal class HandlebarsGoToDeclarationHandler : GotoDeclarationHandler {
     override fun getGotoDeclarationTargets(element: PsiElement?, offset: Int, editor: Editor?): Array<PsiElement>? {
+        if (element == null) return null
         val service = editor?.project?.service<MyProjectService>() ?: return null
-        val hbsFile = element?.containingFile as? HbPsiFile ?: return null
-        if (!element.isHbsIdElement()) return null
 
-        val fullHandlebarsVariable = element.parentOfType<HbMustacheName>() ?: return null
+        return when {
+            element.isHbsIdElement() -> findKotlinReferences(service = service, element = element)
+            else -> null
+        }
+    }
+
+    private fun findKotlinReferences(service: MyProjectService, element: PsiElement): Array<PsiElement> {
+        val fullHandlebarsVariable = element.parentOfType<HbMustacheName>() ?: return emptyArray()
 
         var foundThisElement = false
         val identifierParts = fullHandlebarsVariable.collectDescendantsOfType<HbPsiElement> { descendent ->
@@ -29,7 +34,7 @@ internal class HandlebarsGoToDeclarationHandler : GotoDeclarationHandler {
         }.map { it.text }
 
         return service.findKotlinReferences(
-            hbsFile = hbsFile.virtualFile,
+            hbsFile = element.containingFile.virtualFile,
             hbsIdentifierParts = identifierParts,
         ).toTypedArray()
     }
