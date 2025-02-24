@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
     fun `test going to declaration of variable that is a kotlin field`() {
-        runGoToDeclarationTest(
+        runGoToKotlinDeclarationTest(
             // language=Kt
             kotlinFileContent = "data class ViewModel(val greeting: String?)",
             handlebarsFileContent = "<h1>{{<caret>greeting}}, world</h1>",
@@ -23,7 +23,7 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
     }
 
     fun `test going to declaration of variable that is a kotlin property`() {
-        runGoToDeclarationTest(
+        runGoToKotlinDeclarationTest(
             // language=Kt
             kotlinFileContent = """class ViewModel { val greeting get() = "Hello" }""",
             handlebarsFileContent = "<h1>{{<caret>greeting}}, world</h1>",
@@ -37,7 +37,7 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
     }
 
     fun `test going to declaration of variable used in if block`() {
-        runGoToDeclarationTest(
+        runGoToKotlinDeclarationTest(
             // language=Kt
             kotlinFileContent = "data class ViewModel(val greeting: String?)",
             handlebarsFileContent = "{{#if <caret>greeting}}<h1>Hello world</h1>{{/if}}",
@@ -51,8 +51,8 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
     }
 
     fun `test going to declaration of variable that includes nesting`() {
-        runGoToDeclarationTest(
-            kotlinFilesContent = mapOf(
+        runGoToKotlinDeclarationTest(
+            files = mapOf(
                 "ViewModel.kt" to
                         // language=Kt
                         """
@@ -65,8 +65,9 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
                         |package models
                         |data class Person(val name: String)
                         """.trimMargin(),
+                "View.hbs" to
+                        "<h1>{{<caret>person.name}}, world</h1>",
             ),
-            handlebarsFileContent = "<h1>{{<caret>person.name}}, world</h1>",
             expectedReferences = listOf(
                 ExpectedReference(
                     name = "person",
@@ -77,8 +78,8 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
     }
 
     fun `test going to declaration of variable that includes nesting - nested`() {
-        runGoToDeclarationTest(
-            kotlinFilesContent = mapOf(
+        runGoToKotlinDeclarationTest(
+            files = mapOf(
                 "ViewModel.kt" to
                         // language=Kt
                         """
@@ -91,8 +92,9 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
                         |package models
                         |data class Person(val name: String)
                         """.trimMargin(),
+                "View.hbs" to
+                        "<h1>{{person.<caret>name}}, world</h1>",
             ),
-            handlebarsFileContent = "<h1>{{person.<caret>name}}, world</h1>",
             expectedReferences = listOf(
                 ExpectedReference(
                     name = "name",
@@ -102,29 +104,47 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test going to a referenced partial`() {
+        val files = mapOf(
+            "Partial.hbs" to
+                // language=Handlebars
+                """
+                |<h1>Hello world</h1>
+                """.trimMargin(),
+            "View.hbs" to
+                """
+                |{{>src/<caret>Partial}}
+                """.trimMargin(),
+        )
+        files.forEach { (fileName, content) -> myFixture.configureByText(fileName, content) }
+
+        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
+
+        TestCase.assertEquals(1, targetElements.size)
+    }
 
     private data class ExpectedReference(
         val name: String,
         val definedBy: String,
     )
 
-    private fun runGoToDeclarationTest(
+    private fun runGoToKotlinDeclarationTest(
         kotlinFileContent: String,
         handlebarsFileContent: String,
         expectedReferences: List<ExpectedReference>,
-    ) = runGoToDeclarationTest(
-        kotlinFilesContent = mapOf("ViewModel.kt" to kotlinFileContent),
-        handlebarsFileContent = handlebarsFileContent,
+    ) = runGoToKotlinDeclarationTest(
+        files = mapOf(
+            "ViewModel.kt" to kotlinFileContent,
+            "View.hbs" to handlebarsFileContent,
+        ),
         expectedReferences = expectedReferences,
     )
 
-    private fun runGoToDeclarationTest(
-        kotlinFilesContent: Map<String, String>,
-        handlebarsFileContent: String,
+    private fun runGoToKotlinDeclarationTest(
+        files: Map<String, String>,
         expectedReferences: List<ExpectedReference>,
     ) {
-        kotlinFilesContent.forEach { (fileName, content) -> myFixture.configureByText(fileName, content) }
-        myFixture.configureByText("View.hbs", handlebarsFileContent)
+        files.forEach { (fileName, content) -> myFixture.configureByText(fileName, content) }
 
         val targetElements =
             GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
