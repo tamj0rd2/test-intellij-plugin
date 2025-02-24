@@ -12,7 +12,10 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <gotoDeclarationHandler
-                implementation="com.github.tamj0rd2.testintellijplugin.handlers.HandlebarsGoToDeclarationHandler"/>
+                implementation="com.github.tamj0rd2.testintellijplugin.handlers.GoToMatchingKotlinFieldFromHandlebars"/>
+
+        <gotoDeclarationHandler
+                implementation="com.github.tamj0rd2.testintellijplugin.handlers.GoToHandlebarsPartial"/>
 
         <projectService
                 serviceInterface="com.github.tamj0rd2.testintellijplugin.services.IMyProjectService"

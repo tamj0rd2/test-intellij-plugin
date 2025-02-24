@@ -7,7 +7,7 @@ import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
-class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
+class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
     fun `test going to declaration of variable that is a kotlin field`() {
         runGoToKotlinDeclarationTest(
             // language=Kt
@@ -102,25 +102,6 @@ class HandlebarsGoToDeclarationHandlerTest : BasePlatformTestCase() {
                 )
             )
         )
-    }
-
-    fun `test going to a referenced partial`() {
-        val files = mapOf(
-            "Partial.hbs" to
-                // language=Handlebars
-                """
-                |<h1>Hello world</h1>
-                """.trimMargin(),
-            "View.hbs" to
-                """
-                |{{>src/<caret>Partial}}
-                """.trimMargin(),
-        )
-        files.forEach { (fileName, content) -> myFixture.configureByText(fileName, content) }
-
-        val targetElements = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
-
-        TestCase.assertEquals(1, targetElements.size)
     }
 
     private data class ExpectedReference(
