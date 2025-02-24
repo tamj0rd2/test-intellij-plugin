@@ -1,8 +1,8 @@
-package com.github.tamj0rd2.testintellijplugin.handlers
+package com.github.tamj0rd2.anuraplugin.handlers
 
 import com.dmarcotte.handlebars.psi.HbPartial
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.github.tamj0rd2.testintellijplugin.handlers.HbsUtils.isHbsIdElement
+import com.github.tamj0rd2.anuraplugin.handlers.HbsUtils.isHbsIdElement
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.vfs.findPsiFile

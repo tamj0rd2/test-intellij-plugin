@@ -17,11 +17,21 @@
 - [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
 
 <!-- Plugin description -->
-This Fancy IntelliJ Platform Plugin is going to be your implementation of the brilliant ideas that you have.
+Features:
 
-This specific section is a source for the [plugin.xml](/src/main/resources/META-INF/plugin.xml) file which will be extracted by the [Gradle](/build.gradle.kts) during the build process.
+- Navigate to the kotlin definition of variables used in handlebars files
+- Navigate to partials that are used in your handlebars file
 
-To keep everything working, do not remove `<!-- ... -->` sections. 
+For this to work, your code is expected to follow some conventions:
+
+- Your hbs Views are called `<Something>View`
+- Your kotlin ViewModels are called `<Something>ViewModel`
+- Your hbs partials and kotlin models can be called whatever you want, but they should share the same name. i.e I may have a `Person` kotlin class and a `Person.hbs` file
+
+Gotchas:
+
+- For performance reasons, you'll only be taken to kotlin definitions that exist in the same module that the hbs file exists in. 
+
 <!-- Plugin description end -->
 
 ## Installation

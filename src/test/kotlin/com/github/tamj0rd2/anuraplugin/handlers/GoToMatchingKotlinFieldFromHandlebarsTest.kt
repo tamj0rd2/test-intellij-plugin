@@ -1,4 +1,4 @@
-package com.github.tamj0rd2.testintellijplugin.handlers
+package com.github.tamj0rd2.anuraplugin.handlers
 
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction
 import com.intellij.testFramework.fixtures.BasePlatformTestCase

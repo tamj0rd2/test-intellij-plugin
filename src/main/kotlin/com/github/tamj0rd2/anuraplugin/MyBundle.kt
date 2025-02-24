@@ -1,4 +1,4 @@
-package com.github.tamj0rd2.testintellijplugin
+package com.github.tamj0rd2.anuraplugin
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls

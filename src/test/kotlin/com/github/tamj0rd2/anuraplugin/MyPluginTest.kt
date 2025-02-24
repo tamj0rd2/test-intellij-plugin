@@ -1,7 +1,7 @@
-package com.github.tamj0rd2.testintellijplugin
+package com.github.tamj0rd2.anuraplugin
 
 import com.dmarcotte.handlebars.psi.HbPsiFile
-import com.github.tamj0rd2.testintellijplugin.services.MyProjectService
+import com.github.tamj0rd2.anuraplugin.services.MyProjectService
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 

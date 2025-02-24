@@ -1,4 +1,4 @@
-package com.github.tamj0rd2.testintellijplugin.handlers
+package com.github.tamj0rd2.anuraplugin.handlers
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType

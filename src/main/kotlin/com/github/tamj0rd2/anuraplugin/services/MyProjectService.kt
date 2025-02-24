@@ -1,8 +1,8 @@
-package com.github.tamj0rd2.testintellijplugin.services
+package com.github.tamj0rd2.anuraplugin.services
 
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
-import com.github.tamj0rd2.testintellijplugin.MyBundle
+import com.github.tamj0rd2.anuraplugin.MyBundle
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
