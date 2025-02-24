@@ -1,7 +1,9 @@
 package com.github.tamj0rd2.testintellijplugin.handlers
 
 import com.dmarcotte.handlebars.psi.HbMustacheName
+import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbPsiElement
+import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.github.tamj0rd2.testintellijplugin.handlers.HbsUtils.isHbsIdElement
 import com.github.tamj0rd2.testintellijplugin.services.MyProjectService
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -10,6 +12,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import org.jetbrains.kotlin.psi.psiUtil.parents
 
 internal class GoToMatchingKotlinFieldFromHandlebars : GotoDeclarationHandler {
 
@@ -17,6 +20,9 @@ internal class GoToMatchingKotlinFieldFromHandlebars : GotoDeclarationHandler {
         if (element == null) return null
         if (!element.isHbsIdElement()) return null
         val service = editor?.project?.service<MyProjectService>() ?: return null
+
+        val canGoToDeclaration = element.parents.any { it is HbSimpleMustache || it is HbParam }
+        if (!canGoToDeclaration) return null
 
         val fullHandlebarsVariable = element.parentOfType<HbMustacheName>() ?: return emptyArray()
         val identifierParts = getHbsIdentifierParts(fullHandlebarsVariable, element)
