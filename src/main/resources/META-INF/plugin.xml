@@ -20,14 +20,17 @@
         <projectService
                 serviceInterface="com.github.tamj0rd2.anuraplugin.services.IMyProjectService"
                 serviceImplementation="com.github.tamj0rd2.anuraplugin.services.MyProjectService"/>
+
+        <projectService
+                serviceInterface="com.github.tamj0rd2.anuraplugin.services.IHbsService"
+                serviceImplementation="com.github.tamj0rd2.anuraplugin.services.HbsService" />
+
+        <annotator language="Handlebars"
+                   implementationClass="com.github.tamj0rd2.anuraplugin.annotators.MyAnnotator"/>
     </extensions>
 
     <applicationListeners>
     </applicationListeners>
     <actions>
-        <action id="com.github.tamj0rd2.anuraplugin.actions.ValidateMappingAction"
-                class="com.github.tamj0rd2.anuraplugin.actions.com.github.tamj0rd2.anuraplugin.actions.ValidateMappingAction"
-                text="ValidateMappingAction"
-                description="Validate a hbs partial against its corresponding kotlin model"/>
     </actions>
 </idea-plugin>

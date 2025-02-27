@@ -81,7 +81,7 @@ class MyProjectService(private val project: Project) : IMyProjectService {
         hbsIdentifierParts: List<String>,
         scope: GlobalSearchScope,
     ): Collection<KtDeclaration> {
-        require(hbsIdentifierParts.isNotEmpty()) { "the list of hbs identifier parts shouldn't be empty." }
+        if (hbsIdentifierParts.isEmpty()) return emptyList()
 
         if (hbsIdentifierParts.first() == "this") {
             return recursivelyFindMatchingKotlinReferences(
