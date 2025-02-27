@@ -28,7 +28,7 @@ internal class GoToMatchingKotlinFieldFromHandlebars : GotoDeclarationHandler {
         if (!canGoToDeclaration) return null
 
         val hbsIdentifierParts = element.getHbsIdentifierParts().takeWhileInclusive { it != element.text }
-        println(hbsIdentifierParts)
+
         return service.findKotlinReferences(
             hbsFile = element.containingFile.virtualFile,
             hbsIdentifierParts = hbsIdentifierParts,
