@@ -50,6 +50,7 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
         )
     }
 
+
     fun `test going to declaration of variable used in with block`() {
         runGoToKotlinDeclarationTest(
             kotlinFileContent =
@@ -128,6 +129,31 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
                 // language=Handlebars
                 """
                 |{{#each people as |person|}}<h1>{{person.<caret>age}}</h1>{{/each}}
+                """.trimMargin(),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "age",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
+    fun `test going to declaration of variable used in each block nested within an if block`() {
+        runGoToKotlinDeclarationTest(
+            kotlinFileContent =
+                // language=Kt
+                """
+                |data class Person(val age: String)
+                |data class ViewModel(val people: List<Person>)
+                """.trimMargin(),
+            handlebarsFileContent =
+                """
+                |{{#if people}}
+                |    {{#each people}}
+                |        <h1>{{this.<caret>age}}</h1>
+                |    {{/each}}
+                |{{/if}}
                 """.trimMargin(),
             expectedReferences = listOf(
                 ExpectedReference(

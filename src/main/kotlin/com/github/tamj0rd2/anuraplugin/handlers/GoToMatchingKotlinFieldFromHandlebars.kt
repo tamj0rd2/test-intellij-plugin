@@ -5,10 +5,12 @@ import com.dmarcotte.handlebars.psi.HbBlockWrapper
 import com.dmarcotte.handlebars.psi.HbOpenBlockMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
+import com.dmarcotte.handlebars.psi.impl.HbParamImpl
 import com.github.tamj0rd2.anuraplugin.handlers.HbsUtils.isHbsIdElement
 import com.github.tamj0rd2.anuraplugin.services.MyProjectService
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
@@ -27,7 +29,11 @@ internal class GoToMatchingKotlinFieldFromHandlebars : GotoDeclarationHandler {
         val canGoToDeclaration = element.parents.any { it is HbSimpleMustache || it is HbParam }
         if (!canGoToDeclaration) return null
 
-        val hbsIdentifierParts = element.getHbsIdentifierParts().takeWhileInclusive { it != element.text }
+        val hbsIdentifierParts = element.parentsWithSelf
+            .fold(emptyList(), ::getHbsIdentifierParts)
+            .takeWhileInclusive { it != element.text }
+
+        thisLogger().info("tam service: hbs identifiers are: $hbsIdentifierParts")
 
         return service.findKotlinReferences(
             hbsFile = element.containingFile.virtualFile,
@@ -35,29 +41,35 @@ internal class GoToMatchingKotlinFieldFromHandlebars : GotoDeclarationHandler {
         ).toTypedArray()
     }
 
-    private fun PsiElement.getHbsIdentifierParts(): List<String> =
-        parentsWithSelf.fold(emptyList()) { identifierParts, element ->
-            when (element) {
-                is HbSimpleMustache -> {
-                    val newParts = element.name?.split(".") ?: emptyList()
-                    newParts + identifierParts
-                }
-
-                is HbBlockWrapper -> {
-                    val openBlock = element.getChildOfType<HbOpenBlockMustache>()!!
-                    val param = openBlock.getChildOfType<HbParam>()!!
-
-                    val alias = openBlock.children.firstOrNull { it.elementType == HbTokenTypes.ID }?.text
-                    if (alias != null && alias == identifierParts.firstOrNull()) {
-                        val updatedParts = listOf(param.text) + "this" + identifierParts.drop(1)
-                        return@fold updatedParts
-                    }
-
-                    val newParts = param.text?.split(".") ?: emptyList()
-                    newParts + identifierParts
-                }
-
-                else -> identifierParts
+    private fun getHbsIdentifierParts(identifierParts: List<String>, element: PsiElement): List<String> {
+        when (element) {
+            is HbSimpleMustache -> {
+                val newParts = element.name?.split(".") ?: emptyList()
+                return newParts + identifierParts
             }
+
+            is HbParamImpl -> {
+                val newParts = element.text?.split(".") ?: emptyList()
+                return newParts + identifierParts
+            }
+
+            is HbBlockWrapper -> {
+                val openBlock = element.getChildOfType<HbOpenBlockMustache>() ?: return identifierParts
+                if (openBlock.name == "if") return identifierParts
+
+                val param = openBlock.getChildOfType<HbParam>() ?: return identifierParts
+
+                val alias = openBlock.children.firstOrNull { it.elementType == HbTokenTypes.ID }?.text
+                if (alias != null && alias == identifierParts.firstOrNull()) {
+                    val updatedParts = listOf(param.text) + "this" + identifierParts.drop(1)
+                    return updatedParts
+                }
+
+                val newParts = param.text?.split(".") ?: emptyList()
+                return newParts + identifierParts
+            }
+
+            else -> return identifierParts
         }
+    }
 }
