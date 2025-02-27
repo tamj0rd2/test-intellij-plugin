@@ -18,9 +18,12 @@ class MyPluginTest : BasePlatformTestCase() {
             |    val anotherInheritedField: Int
             |}
             |
+            |data class Person(val name: String)
+            |
             |data class ViewModel(
             |    val aField: String,
             |    override val inheritedField: Boolean,
+            |    val person: Person,
             |) : InheritedFields {
             |    val aComputedProperty get() = "some computed property"
             |    val aHardCodedProperty = 123
@@ -36,12 +39,20 @@ class MyPluginTest : BasePlatformTestCase() {
             |<p><{{aField}}/p>
             |<p><{{aComputedProperty}}/p>
             |<p>{{inheritedComputedProperty}}</p>
+            |<p>{{person.name}} is {{person.age}} years old</p>
             |<p>This one doesn't exist in the view model: {{nonExistentField}}</p>
             """.trimMargin()
         ) as HbPsiFile
 
         val projectService = project.service<MyProjectService>()
         val result = projectService.validateOneToOneMappingAgainstViewModel(hbsFile)
-        assertEquals(setOf("nonExistentField"), result.fieldsMissingFromViewModel)
+        assertEquals(
+            // TODO: it'd be nice if for each missing property, it would actually just tell me which viewmodel it's missing from.
+            //  rather than having to trace the paths back myself as a user. Modelling here can be improved.
+            MyProjectService.MappingValidationResult(
+                fieldsMissingFromViewModel = setOf("person.age", "nonExistentField"),
+                viewModelName = "ViewModel"
+            ), result
+        )
     }
 }

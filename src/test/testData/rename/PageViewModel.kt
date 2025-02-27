@@ -14,4 +14,4 @@ data class PageViewModel(
 
 data class Person(val name: String)
 
-data class SecondViewModel(val person: Person)
+data class SecondViewModel(val people: List<Person>)

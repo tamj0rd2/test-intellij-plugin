@@ -24,4 +24,10 @@
 
     <applicationListeners>
     </applicationListeners>
+    <actions>
+        <action id="com.github.tamj0rd2.anuraplugin.actions.ValidateMappingAction"
+                class="com.github.tamj0rd2.anuraplugin.actions.com.github.tamj0rd2.anuraplugin.actions.ValidateMappingAction"
+                text="ValidateMappingAction"
+                description="Validate a hbs partial against its corresponding kotlin model"/>
+    </actions>
 </idea-plugin>
