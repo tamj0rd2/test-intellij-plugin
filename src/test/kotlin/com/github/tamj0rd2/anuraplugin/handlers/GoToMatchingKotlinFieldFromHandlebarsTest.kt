@@ -60,7 +60,6 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
                 |data class ViewModel(val person: Person)
                 """.trimMargin(),
             handlebarsFileContent =
-                // language=Handlebars
                 """
                 |{{#with person}}<h1>{{<caret>age}}</h1>{{/with}}
                 """.trimMargin(),
@@ -82,7 +81,6 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
                 |data class ViewModel(val person: Person)
                 """.trimMargin(),
             handlebarsFileContent =
-                // language=Handlebars
                 """
                 |{{#with person as |p|}}<h1>{{p.<caret>age}}</h1>{{/with}}
                 """.trimMargin(),
@@ -104,7 +102,6 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
                 |data class ViewModel(val people: List<Person>)
                 """.trimMargin(),
             handlebarsFileContent =
-                // language=Handlebars
                 """
                 |{{#each people}}<h1>{{this.name}} is {{this.<caret>age}}</h1>{{/each}}
                 """.trimMargin(),
@@ -126,7 +123,6 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
                 |data class ViewModel(val people: List<Person>)
                 """.trimMargin(),
             handlebarsFileContent =
-                // language=Handlebars
                 """
                 |{{#each people as |person|}}<h1>{{person.<caret>age}}</h1>{{/each}}
                 """.trimMargin(),
