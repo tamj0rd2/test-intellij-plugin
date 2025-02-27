@@ -50,6 +50,50 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test going to declaration of variable used in with block`() {
+        runGoToKotlinDeclarationTest(
+            kotlinFileContent =
+                // language=Kt
+                """
+                |data class Person(val age: String)
+                |data class ViewModel(val person: Person)
+                """.trimMargin(),
+            handlebarsFileContent =
+                // language=Handlebars
+                """
+                |{{#with person}}<h1>{{<caret>age}}</h1>{{/with}}
+                """.trimMargin(),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "age",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
+    fun `test going to declaration of variable used in named with block`() {
+        runGoToKotlinDeclarationTest(
+            kotlinFileContent =
+                // language=Kt
+                """
+                |data class Person(val age: String)
+                |data class ViewModel(val person: Person)
+                """.trimMargin(),
+            handlebarsFileContent =
+                // language=Handlebars
+                """
+                |{{#with person as |p|}}<h1>{{p.<caret>age}}</h1>{{/with}}
+                """.trimMargin(),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "age",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
     fun `test going to declaration of variable used in each block`() {
         runGoToKotlinDeclarationTest(
             kotlinFileContent =
