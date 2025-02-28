@@ -136,11 +136,18 @@ class MyProjectService(private val project: Project) : IMyProjectService {
             PsiTreeUtil.collectElementsOfType(this, HbSimpleMustache::class.java).map { it.name }.toSet()
 
         fun KtDeclaration.referencedTypeName(): String {
-            if (this is KtParameter && typeFqName()?.asString() == "kotlin.collections.List") {
+            if (this.isAKotlinList()) {
                 return typeReference.typeArguments().single().referencedTyped.getReferencedName()
             }
 
             return referencedTyped.getReferencedName()
+        }
+
+        private fun KtDeclaration.isAKotlinList(): Boolean {
+            if (this !is KtParameter) return false
+
+            @Suppress("DEPRECATION", "UnstableApiUsage")
+            return typeFqName()?.asString() == "kotlin.collections.List"
         }
 
         val KtDeclaration.referencedTyped
