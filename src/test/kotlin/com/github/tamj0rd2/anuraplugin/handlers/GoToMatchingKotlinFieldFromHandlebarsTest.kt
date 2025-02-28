@@ -114,6 +114,49 @@ class GoToMatchingKotlinFieldFromHandlebarsTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test going to declaration of variable used in each block - without using this as reference`() {
+        runGoToKotlinDeclarationTest(
+            kotlinFileContent =
+                // language=Kt
+                """
+                |data class Person(val name: String, val age: String)
+                |data class ViewModel(val people: List<Person>)
+                """.trimMargin(),
+            handlebarsFileContent =
+                """
+                |{{#each people}}<h1>{{name}} is {{<caret>age}}</h1>{{/each}}
+                """.trimMargin(),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "age",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
+    fun `test going to declaration of variable used in each block with nesting`() {
+        runGoToKotlinDeclarationTest(
+            kotlinFileContent =
+                // language=Kt
+                """
+                |data class Person(val name: String, val age: String)
+                |data class Nested(val people: List<Person>)
+                |data class ViewModel(val nested: Nested)
+                """.trimMargin(),
+            handlebarsFileContent =
+                """
+                |{{#each nested.people}}<h1>{{name}} is {{<caret>age}}</h1>{{/each}}
+                """.trimMargin(),
+            expectedReferences = listOf(
+                ExpectedReference(
+                    name = "age",
+                    definedBy = "Person"
+                )
+            )
+        )
+    }
+
     fun `test going to declaration of variable used in named each block`() {
         runGoToKotlinDeclarationTest(
             kotlinFileContent =
