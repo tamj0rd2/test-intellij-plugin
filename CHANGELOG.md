@@ -3,6 +3,10 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Navigate from a hbs variable to the relevant kotlin field
+- Highlight hbs variables that are missing from the kotlin model
+- Navigate to handlebars partials
 
 ## [0.0.3] - 2025-02-28
 
