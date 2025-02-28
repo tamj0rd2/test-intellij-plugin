@@ -5,6 +5,7 @@
     <vendor>tamj0rd2</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
     <depends>org.jetbrains.kotlin</depends>
     <depends>com.dmarcotte.handlebars</depends>
 
