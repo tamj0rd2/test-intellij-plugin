@@ -4,3 +4,6 @@
 .qodana
 build
 .kotlin
+*.crt
+*.pem
+*.envrc
